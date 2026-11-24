@@ -25,7 +25,7 @@ import pathlib
 from types import ModuleType
 from typing import Any, Callable, Mapping, Optional, Type, TypeVar, Union
 
-from confit.registry import suppress_registration
+from confort.registry import suppress_registration
 
 C = TypeVar("C", bound="Config")
 T = TypeVar("T")
@@ -53,7 +53,7 @@ def _is_private(name: str) -> bool:
 
 @dataclasses.dataclass
 class Config:
-    """Base class for every confit config.
+    """Base class for every confort config.
 
     Provides pretty printing (``str(cfg)``), conversion to plain dicts,
     saving/loading to YAML or JSON, and dotted-path overrides.
@@ -128,7 +128,7 @@ class Config:
 
             small = train_closer.replace(**{"optimizer.lr": 1e-5, "batch_size": 8})
 
-        For an :class:`~confit.Entrypoint`, the copy is registered as a new
+        For an :class:`~confort.Entrypoint`, the copy is registered as a new
         CLI command only if you pass a new ``_entrypoint`` name.
         """
         if "_entrypoint" in overrides:
@@ -181,13 +181,13 @@ class InstantiateConfig(Config):
         """
         if not callable(target):
             raise TypeError(f"{cls.__name__}.builds expects a class or function, got {target!r}")
-        cls._confit_target_ = target  # type: ignore[attr-defined]
+        cls._confort_target_ = target  # type: ignore[attr-defined]
         return target
 
     @property
     def target(self) -> Callable[..., Any]:
         """The class or function :meth:`setup` will call."""
-        target = self._target or getattr(type(self), "_confit_target_", None)
+        target = self._target or getattr(type(self), "_confort_target_", None)
         if target is None:
             name = type(self).__name__
             raise TypeError(

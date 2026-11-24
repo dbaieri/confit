@@ -2,7 +2,7 @@ import collections
 from dataclasses import dataclass
 from types import ModuleType
 
-from confit import FactoryConfig
+from confort import FactoryConfig
 
 
 @dataclass

@@ -1,13 +1,13 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="confit logo" width="200">
+  <img src="assets/logo.svg" alt="confort logo" width="200">
 </p>
 
-# confit
+# confort
 
-Dataclass configs, self-registering entrypoints and a [tyro](https://github.com/brentyi/tyro) CLI, slow-cooked so every project can reuse them.
+Dataclass configs, self-registering entrypoints and a [tyro](https://github.com/brentyi/tyro) CLI: a comfortable fort for your settings, reusable across projects.
 
 ```bash
-pip install git+https://github.com/dbaieri/confit   # or: pip install -e . from a clone
+pip install git+https://github.com/dbaieri/confort   # or: pip install -e . from a clone
 ```
 
 Requires Python ≥ 3.10. Dependencies: `tyro`, `pyyaml`.
@@ -17,7 +17,7 @@ Requires Python ≥ 3.10. Dependencies: `tyro`, `pyyaml`.
 ```python
 # myproject/train.py
 from dataclasses import dataclass
-from confit import Entrypoint
+from confort import Entrypoint
 
 @dataclass
 class TrainerConfig(Entrypoint):
@@ -39,10 +39,10 @@ TrainerConfig(steps=10, _entrypoint="train.debug", _help="Ten quick steps")
 
 ```python
 # run.py
-import confit
+import confort
 
 if __name__ == "__main__":
-    confit.cli(discover="myproject")
+    confort.cli(discover="myproject")
 ```
 
 ```bash
@@ -72,7 +72,7 @@ There are two ways to say which class a config builds:
 ```python
 from dataclasses import dataclass, field
 from typing import Type
-from confit import InstantiateConfig
+from confort import InstantiateConfig
 
 # 1. Decorator on the built class (no forward-reference lambda needed)
 @dataclass
@@ -101,7 +101,7 @@ Use this to configure third-party callables without writing a wrapper class. `_m
 ```python
 import torch
 from types import ModuleType
-from confit import FactoryConfig
+from confort import FactoryConfig
 
 @dataclass
 class AdamConfig(FactoryConfig):
@@ -118,7 +118,7 @@ optimizer = AdamConfig(lr=1e-4).setup(params=model.parameters())
 `default(value)` is a shorthand for `field(default_factory=lambda: copy.deepcopy(value))`. It works for lists, dicts and nested configs:
 
 ```python
-from confit import default
+from confort import default
 
 @dataclass
 class TrainerConfig(Entrypoint):
@@ -160,9 +160,9 @@ An `Entrypoint` is an `InstantiateConfig` that can be launched from the CLI:
 Small tools don't need a config class. Decorate a function and its signature becomes the CLI:
 
 ```python
-import confit
+import confort
 
-@confit.command("data.stats", help="Print dataset statistics")
+@confort.command("data.stats", help="Print dataset statistics")
 def stats(root: str, verbose: bool = False) -> None:
     ...
 ```
@@ -172,7 +172,7 @@ Without a name, the function name is used with `_` replaced by `-`. If you leave
 ## The CLI
 
 ```python
-confit.cli(
+confort.cli(
     discover="myproject",                          # package(s) to import recursively
     exclude=["myproject.viz"],                     # skip modules/packages (glob patterns ok)
     save_config="outputs/{name}/{time}/config.yaml",
@@ -190,8 +190,8 @@ confit.cli(
 | `save_config` | `None` | Save the parsed config before running. `{name}` and `{time}` are filled in |
 | `config_file_flag` | `"--config-file"` | Flag that loads a saved YAML/JSON config. `None` disables it |
 | `accent_color` | `None` | tyro help color |
-| `markers` | `confit.DEFAULT_MARKERS` | tyro markers. By default, fixed fields are hidden and booleans are written `--flag True` / `--flag False` (`tyro.conf.FlagConversionOff`) |
-| `registry` | `confit.registry` | Registry to read entrypoints from |
+| `markers` | `confort.DEFAULT_MARKERS` | tyro markers. By default, fixed fields are hidden and booleans are written `--flag True` / `--flag False` (`tyro.conf.FlagConversionOff`) |
+| `registry` | `confort.registry` | Registry to read entrypoints from |
 
 Command-line behavior:
 
@@ -203,21 +203,21 @@ python run.py --config-file outputs/train.default/2026-11-24_10-00-00/config.yam
 - **Loading a saved config.** `--config-file` loads values from a saved file, and any other flags override them. Files written by `cfg.save` / `save_config` record their entrypoint name, so you don't need to repeat the subcommand.
 - **Single entrypoint.** With only one entrypoint, the CLI has no subcommand: run `python run.py --lr ...` directly. Its name is still accepted.
 - **Choose a non-clashing flag name.** If one of your configs has a field called `config_file`, set `config_file_flag` to another flag name.
-- **pyproject scripts.** You can use `confit.cli` from a `[project.scripts]` function:
+- **pyproject scripts.** You can use `confort.cli` from a `[project.scripts]` function:
   ```python
   def main():
-      confit.cli(discover="myproject")
+      confort.cli(discover="myproject")
   ```
 
 ## Registry and discovery
 
 | Function / object | Description |
 |---|---|
-| `confit.discover(packages, exclude=())` | Import packages recursively. Returns the names of the imported modules |
-| `confit.registry` | Global `Registry`: `names()`, `registry["name"]`, `in`, `len`, iteration, `remove(name)`, `clear()` |
-| `confit.Registration` | One entry, with fields `name`, `target`, `help` and `module` |
-| `confit.suppress_registration()` | Context manager: entrypoints created inside it are not registered |
-| `confit.get_parser(...)` | The underlying `argparse` parser, e.g. for sphinx-argparse. It relies on `tyro.extras.get_parser`, which tyro has deprecated |
+| `confort.discover(packages, exclude=())` | Import packages recursively. Returns the names of the imported modules |
+| `confort.registry` | Global `Registry`: `names()`, `registry["name"]`, `in`, `len`, iteration, `remove(name)`, `clear()` |
+| `confort.Registration` | One entry, with fields `name`, `target`, `help` and `module` |
+| `confort.suppress_registration()` | Context manager: entrypoints created inside it are not registered |
+| `confort.get_parser(...)` | The underlying `argparse` parser, e.g. for sphinx-argparse. It relies on `tyro.extras.get_parser`, which tyro has deprecated |
 
 ## Development
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Tuple, Type
 
-from confit import Entrypoint, FactoryConfig, default
+from confort import Entrypoint, FactoryConfig, default
 
 from .optim import CounterConfig
 

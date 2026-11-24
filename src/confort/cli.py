@@ -13,10 +13,10 @@ from typing import Annotated, Any, Iterable, Optional, Sequence, Union
 import tyro
 from tyro.constructors import ConstructorRegistry, StructConstructorSpec, StructTypeInfo
 
-from confit.config import Config, load_file
-from confit.discovery import discover as _discover
-from confit.entrypoint import Entrypoint
-from confit.registry import Registration, Registry, registry as _default_registry, suppress_registration
+from confort.config import Config, load_file
+from confort.discovery import discover as _discover
+from confort.entrypoint import Entrypoint
+from confort.registry import Registration, Registry, registry as _default_registry, suppress_registration
 
 DEFAULT_MARKERS: tuple[Any, ...] = (tyro.conf.SuppressFixed, tyro.conf.FlagConversionOff)
 """tyro markers applied by default (the pgp setup): hide fixed fields, and
@@ -25,7 +25,7 @@ spell booleans as ``--flag True`` / ``--flag False``."""
 # --- hide private fields from the CLI ------------------------------------------
 
 _tyro_registry = ConstructorRegistry()
-_inside_rule: contextvars.ContextVar[bool] = contextvars.ContextVar("confit_inside_rule", default=False)
+_inside_rule: contextvars.ContextVar[bool] = contextvars.ContextVar("confort_inside_rule", default=False)
 
 
 @_tyro_registry.struct_rule
@@ -68,14 +68,14 @@ def cli(
     Args:
         discover: Package(s) to import recursively before building the CLI, so
             the entrypoints they define register themselves (see
-            :func:`confit.discover`). ``None`` uses only what is already
+            :func:`confort.discover`). ``None`` uses only what is already
             registered.
         exclude: Module names/patterns to skip during discovery.
         args: Arguments to parse; defaults to ``sys.argv[1:]``.
         prog: Program name shown in the help.
         description: Text shown at the top of the help.
         run: If true, call ``config.run()`` and return its result; if false,
-            return the parsed :class:`~confit.Entrypoint` config instead.
+            return the parsed :class:`~confort.Entrypoint` config instead.
             Function entrypoints are always called.
         save_config: If set, the parsed config is saved here before running.
             ``{name}`` and ``{time}`` are replaced by the entrypoint name and a
@@ -153,7 +153,7 @@ def _cli_type(reg: Registry, overrides: dict[str, Entrypoint]) -> Any:
     if len(reg) == 0:
         raise RuntimeError(
             "No entrypoints registered. Create an Entrypoint with `_entrypoint=...`, decorate a "
-            "function with @confit.command, or pass `discover=` to import the modules defining them."
+            "function with @confort.command, or pass `discover=` to import the modules defining them."
         )
     options = [_subcommand(r, overrides.get(r.name)) for r in reg]
     return options[0] if len(options) == 1 else Union[tuple(options)]  # type: ignore[valid-type]

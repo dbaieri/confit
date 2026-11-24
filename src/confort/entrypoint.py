@@ -6,8 +6,8 @@ import dataclasses
 from abc import ABCMeta
 from typing import Any, Optional
 
-from confit.config import InstantiateConfig
-from confit.registry import registration_suppressed, registry
+from confort.config import InstantiateConfig
+from confort.registry import registration_suppressed, registry
 
 
 class EntrypointMeta(ABCMeta):

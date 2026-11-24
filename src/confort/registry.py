@@ -1,8 +1,8 @@
 """The global registry of named entrypoints.
 
-Entrypoints are added here automatically when an :class:`~confit.Entrypoint`
+Entrypoints are added here automatically when an :class:`~confort.Entrypoint`
 is created with an ``_entrypoint`` name, or when a function is decorated with
-:func:`~confit.command`. The CLI reads this registry to build its subcommands.
+:func:`~confort.command`. The CLI reads this registry to build its subcommands.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Generator, Iterator, Optional
 
 _suppressed: contextvars.ContextVar[bool] = contextvars.ContextVar(
-    "confit_registration_suppressed", default=False
+    "confort_registration_suppressed", default=False
 )
 
 
@@ -22,7 +22,7 @@ _suppressed: contextvars.ContextVar[bool] = contextvars.ContextVar(
 def suppress_registration() -> Generator[None, None, None]:
     """Context manager: entrypoints created inside it are *not* registered.
 
-    confit uses it internally whenever it makes copies of a registered config
+    confort uses it internally whenever it makes copies of a registered config
     (CLI parsing, :meth:`Config.replace`, :meth:`Config.merge`), so copies never
     collide with the original. You rarely need it yourself.
     """
@@ -43,7 +43,7 @@ class Registration:
 
     Attributes:
         name: The subcommand name, e.g. ``"train.closer"``.
-        target: An :class:`~confit.Entrypoint` instance (its values become the
+        target: An :class:`~confort.Entrypoint` instance (its values become the
             CLI defaults) or a plain function (its signature becomes the CLI).
         help: Help text shown in the CLI. ``None`` falls back to the
             docstring of the config class or function.
@@ -57,7 +57,7 @@ class Registration:
 
     @property
     def is_function(self) -> bool:
-        from confit.entrypoint import Entrypoint
+        from confort.entrypoint import Entrypoint
 
         return not isinstance(self.target, Entrypoint)
 
@@ -125,7 +125,7 @@ class Registry:
 
 
 registry = Registry()
-"""The default, process-wide registry used by :func:`confit.cli`."""
+"""The default, process-wide registry used by :func:`confort.cli`."""
 
 
 def command(
@@ -134,7 +134,7 @@ def command(
     """Decorator registering a plain function as a CLI subcommand.
 
     The function's parameters become CLI flags (via tyro); it is called with
-    the parsed values and its return value is returned by :func:`confit.cli`.
+    the parsed values and its return value is returned by :func:`confort.cli`.
 
     Args:
         name: Subcommand name. Defaults to the function name with ``_``
@@ -143,7 +143,7 @@ def command(
 
     Example::
 
-        @confit.command("data.stats")
+        @confort.command("data.stats")
         def stats(root: str, verbose: bool = False) -> None:
             ...
     """
@@ -172,11 +172,11 @@ def _equivalent(a: Any, b: Any) -> bool:
 
 
 def _caller_module() -> Optional[str]:
-    """Name of the first module up the stack that is not confit or dataclasses."""
+    """Name of the first module up the stack that is not confort or dataclasses."""
     frame = sys._getframe(1)
     while frame is not None:
         mod = frame.f_globals.get("__name__", "")
-        if not (mod == "confit" or mod.startswith("confit.") or mod in ("dataclasses", "abc")):
+        if not (mod == "confort" or mod.startswith("confort.") or mod in ("dataclasses", "abc")):
             return mod
         frame = frame.f_back
     return None

@@ -7,8 +7,8 @@ from types import ModuleType
 
 import pytest
 
-import confit
-from confit import Config, Entrypoint, FactoryConfig, InstantiateConfig, default
+import confort
+from confort import Config, Entrypoint, FactoryConfig, InstantiateConfig, default
 
 
 # --- configs -------------------------------------------------------------------
@@ -127,27 +127,27 @@ def test_deepcopy_with_module_field():
 
 
 def test_discovery_registers_entrypoints(project):
-    assert sorted(confit.registry.names()) == ["add-numbers", "legacy", "train.fast", "train.long"]
-    assert confit.registry["train.fast"].help == "Quick run"
-    assert confit.registry["train.fast"].module == "fakeproj.train"
+    assert sorted(confort.registry.names()) == ["add-numbers", "legacy", "train.fast", "train.long"]
+    assert confort.registry["train.fast"].help == "Quick run"
+    assert confort.registry["train.fast"].module == "fakeproj.train"
 
 
 def test_discovery_exclude_and_main():
     with pytest.raises(ImportError, match="excluded package"):
-        confit.discover("fakeproj")
-    imported = confit.discover("fakeproj", exclude=["fakeproj.broken"])
+        confort.discover("fakeproj")
+    imported = confort.discover("fakeproj", exclude=["fakeproj.broken"])
     assert "fakeproj.__main__" not in imported and "fakeproj.sub.tools" in imported
 
 
 def test_copies_do_not_reregister(project):
     variant = project.train_fast.replace(lr=0.5)
-    assert variant.lr == 0.5 and confit.registry["train.fast"].target.lr == 1e-2
+    assert variant.lr == 0.5 and confort.registry["train.fast"].target.lr == 1e-2
     dataclasses.replace(project.train_fast)  # identical copy: silently ignored
 
 
 def test_replace_with_new_name_registers(project):
     project.train_fast.replace(steps=99, _entrypoint="train.fast99")
-    assert confit.registry["train.fast99"].target.steps == 99
+    assert confort.registry["train.fast99"].target.steps == 99
 
 
 def test_conflicting_names_raise(project):
@@ -164,7 +164,7 @@ def test_registration_survives_custom_post_init():
             self.x += 1
 
     P(_entrypoint="p")
-    assert confit.registry["p"].target.x == 1
+    assert confort.registry["p"].target.x == 1
 
 
 def test_entrypoint_run(project):
@@ -176,26 +176,26 @@ def test_entrypoint_run(project):
 
 
 def test_cli_runs_with_overrides(project):
-    out = confit.cli(args=["train.fast", "--steps", "5", "--amp", "True", "--optimizer.a", "4"])
+    out = confort.cli(args=["train.fast", "--steps", "5", "--amp", "True", "--optimizer.a", "4"])
     assert out == ("trained", 1e-2, 5, True)
-    cfg = confit.cli(args=["train.fast", "--optimizer.a", "4"], run=False)
+    cfg = confort.cli(args=["train.fast", "--optimizer.a", "4"], run=False)
     assert cfg.optimizer.a == 4 and isinstance(cfg.optimizer, project.CounterConfig)
     assert cfg.optimizer.setup() == collections.Counter(a=4, b=2)
-    assert len(confit.registry) == 4  # parsing did not register copies
+    assert len(confort.registry) == 4  # parsing did not register copies
 
 
 def test_cli_discover_argument():
-    out = confit.cli("fakeproj", exclude=["fakeproj.broken"], args=["legacy", "--x", "1"])
+    out = confort.cli("fakeproj", exclude=["fakeproj.broken"], args=["legacy", "--x", "1"])
     assert out == ("legacy", 1)
 
 
 def test_cli_function_entrypoint(project):
-    assert confit.cli(args=["add-numbers", "--a", "40"]) == 42
+    assert confort.cli(args=["add-numbers", "--a", "40"]) == 42
 
 
 def test_cli_help_hides_private_fields(project, capsys):
     with pytest.raises(SystemExit):
-        confit.cli(args=["train.fast", "--help"])
+        confort.cli(args=["train.fast", "--help"])
     out = capsys.readouterr().out
     assert "--steps" in out and "--optimizer.a" in out
     assert "_entrypoint" not in out and "_name" not in out and "_target" not in out
@@ -203,12 +203,12 @@ def test_cli_help_hides_private_fields(project, capsys):
 
 def test_cli_config_file_and_save(project, tmp_path):
     template = str(tmp_path / "{name}" / "config.yaml")
-    confit.cli(args=["train.long", "--steps", "7"], save_config=template)
+    confort.cli(args=["train.long", "--steps", "7"], save_config=template)
     saved = tmp_path / "train.long" / "config.yaml"
     assert saved.exists()
 
     # subcommand name is read from the file; CLI flags still override it
-    cfg = confit.cli(args=["--config-file", str(saved), "--lr", "0.1"], run=False)
+    cfg = confort.cli(args=["--config-file", str(saved), "--lr", "0.1"], run=False)
     assert (cfg._entrypoint, cfg.steps, cfg.lr) == ("train.long", 7, 0.1)
 
 
@@ -221,16 +221,16 @@ def test_cli_single_entrypoint_needs_no_subcommand():
             return self.n
 
     Solo(_entrypoint="solo")
-    assert confit.cli(args=["--n", "3"]) == 3
-    assert confit.cli(args=["solo", "--n", "4"]) == 4
+    assert confort.cli(args=["--n", "3"]) == 3
+    assert confort.cli(args=["solo", "--n", "4"]) == 4
 
 
 def test_cli_without_entrypoints_errors():
     with pytest.raises(RuntimeError, match="No entrypoints"):
-        confit.cli(args=[])
+        confort.cli(args=[])
 
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
 def test_get_parser(project):
-    parser = confit.get_parser()
+    parser = confort.get_parser()
     assert "train.fast" in parser.format_help()
