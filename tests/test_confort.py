@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from types import ModuleType
 
 import pytest
+import tyro
 
 import confort
 from confort import Config, Entrypoint, FactoryConfig, InstantiateConfig, default
@@ -230,7 +231,35 @@ def test_cli_without_entrypoints_errors():
         confort.cli(args=[])
 
 
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
-def test_get_parser(project):
-    parser = confort.get_parser()
-    assert "train.fast" in parser.format_help()
+def _tyro(args):
+    return tyro.cli(
+        confort.cli_type(), args=args, registry=confort.tyro_registry, config=confort.DEFAULT_MARKERS
+    )
+
+
+def test_cli_type_with_tyro_directly(project):
+    # Overriding a value of a named entrypoint must not clash with the registered original.
+    cfg = _tyro(["train.fast", "--steps", "9", "--optimizer.a", "5"])
+    assert isinstance(cfg, project.TrainerConfig)
+    assert (cfg.steps, cfg.optimizer.a, cfg._entrypoint) == (9, 5, "train.fast")
+    assert confort.registry["train.fast"].target.steps == 3
+    assert len(confort.registry) == 4
+    assert cfg.run() == ("trained", 1e-2, 9, False)
+    assert _tyro(["add-numbers", "--a", "1"]) == 3
+
+
+def test_cli_type_hides_private_fields(project, capsys):
+    with pytest.raises(SystemExit):
+        _tyro(["train.fast", "--help"])
+    out = capsys.readouterr().out
+    assert "--steps" in out and "_entrypoint" not in out and "_name" not in out
+
+
+def test_cli_type_discover_and_single_entrypoint():
+    t = confort.cli_type("fakeproj", exclude=["fakeproj.broken"])
+    assert "train.fast" in repr(t)
+
+    solo = confort.Registry()
+    solo.add("only", confort.registry["legacy"].target)
+    cfg = tyro.cli(confort.cli_type(registry=solo), args=["--x", "2"], registry=confort.tyro_registry)
+    assert cfg.x == 2

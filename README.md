@@ -209,6 +209,24 @@ python run.py --config-file outputs/train.default/2026-11-24_10-00-00/config.yam
       confort.cli(discover="myproject")
   ```
 
+### Using the CLI type with tyro directly
+
+`confort.cli_type()` returns the tyro type that `confort.cli` parses: a `Union` with one subcommand per registered entrypoint, or just that subcommand's type if there is only one. Use it when you want to drive tyro yourself, for example to build your own launcher or to feed tyro-based tooling.
+
+Always pass `registry=confort.tyro_registry` along with it. That constructor registry hides private fields from the CLI and stops parsed copies from re-registering. Without it, overriding a value of a named entrypoint raises a name-clash error.
+
+```python
+import tyro
+import confort
+
+config = tyro.cli(
+    confort.cli_type(discover="myproject"),   # same discover/exclude/registry options as cli()
+    registry=confort.tyro_registry,
+    config=confort.DEFAULT_MARKERS,
+)
+config.run()   # cli_type leaves running, saving and --config-file to you
+```
+
 ## Registry and discovery
 
 | Function / object | Description |
@@ -217,7 +235,8 @@ python run.py --config-file outputs/train.default/2026-11-24_10-00-00/config.yam
 | `confort.registry` | Global `Registry`: `names()`, `registry["name"]`, `in`, `len`, iteration, `remove(name)`, `clear()` |
 | `confort.Registration` | One entry, with fields `name`, `target`, `help` and `module` |
 | `confort.suppress_registration()` | Context manager: entrypoints created inside it are not registered |
-| `confort.get_parser(...)` | The underlying `argparse` parser, e.g. for sphinx-argparse. It relies on `tyro.extras.get_parser`, which tyro has deprecated |
+| `confort.cli_type(discover=None, exclude=(), registry=None)` | The tyro type behind `confort.cli` (see above) |
+| `confort.tyro_registry` | tyro `ConstructorRegistry` to pass as `registry=` whenever you give confort configs to tyro yourself |
 
 ## Development
 

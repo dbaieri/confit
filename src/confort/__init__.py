@@ -1,6 +1,6 @@
 """confort: dataclass configs, self-registering entrypoints and a tyro CLI."""
 
-from confort.cli import DEFAULT_MARKERS, cli, get_parser
+from confort.cli import DEFAULT_MARKERS, cli, cli_type, tyro_registry
 from confort.config import Config, FactoryConfig, InstantiateConfig, default
 from confort.discovery import discover
 from confort.entrypoint import Entrypoint
@@ -16,7 +16,8 @@ __all__ = [
     "default",
     "command",
     "cli",
-    "get_parser",
+    "cli_type",
+    "tyro_registry",
     "discover",
     "registry",
     "Registry",

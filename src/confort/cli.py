@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import contextvars
 import dataclasses
 import datetime
@@ -22,14 +21,23 @@ DEFAULT_MARKERS: tuple[Any, ...] = (tyro.conf.SuppressFixed, tyro.conf.FlagConve
 """tyro markers applied by default (the pgp setup): hide fixed fields, and
 spell booleans as ``--flag True`` / ``--flag False``."""
 
-# --- hide private fields from the CLI ------------------------------------------
+# --- tyro constructor rules for confort configs ---------------------------------
 
-_tyro_registry = ConstructorRegistry()
+tyro_registry = ConstructorRegistry()
+"""tyro constructor registry that adapts confort configs to tyro.
+
+Pass it as ``registry=`` whenever you hand :func:`cli_type` (or any confort
+config) to tyro yourself. It hides private (``_``-prefixed) fields from the
+CLI, and it builds parsed configs with registration suppressed, so overridden
+copies of a named :class:`~confort.Entrypoint` never clash with the original.
+:func:`cli` uses it automatically.
+"""
+
 _inside_rule: contextvars.ContextVar[bool] = contextvars.ContextVar("confort_inside_rule", default=False)
 
 
-@_tyro_registry.struct_rule
-def _hide_private_fields(info: StructTypeInfo) -> Optional[StructConstructorSpec]:
+@tyro_registry.struct_rule
+def _confort_config_rule(info: StructTypeInfo) -> Optional[StructConstructorSpec]:
     if _inside_rule.get() or not (isinstance(info.type, type) and issubclass(info.type, Config)):
         return None
     token = _inside_rule.set(True)
@@ -43,7 +51,13 @@ def _hide_private_fields(info: StructTypeInfo) -> Optional[StructConstructorSpec
         dataclasses.replace(f, type=Annotated[f.type, tyro.conf.Suppress]) if f.name.startswith("_") else f
         for f in spec.fields
     )
-    return dataclasses.replace(spec, fields=fields)
+    build = spec.instantiate
+
+    def instantiate(*args: Any, **kwargs: Any) -> Any:
+        with suppress_registration():  # parsed copies must not re-register
+            return build(*args, **kwargs)
+
+    return dataclasses.replace(spec, fields=fields, instantiate=instantiate)
 
 
 # --- public API ----------------------------------------------------------------
@@ -108,14 +122,19 @@ def cli(
             hint = f"Pass `{config_file_flag} PATH` to load values from a saved YAML/JSON config."
             description = f"{description}\n\n{hint}" if description else hint
 
-    cli_type = _cli_type(reg, overrides)
     if len(reg) == 1 and argv and argv[0] == reg.names()[0]:
         argv = argv[1:]  # a single entrypoint has no subcommand; accept its name anyway
 
     if accent_color is not None:
         tyro.extras.set_accent_color(accent_color)
-    with _tyro_registry, suppress_registration():
-        result = tyro.cli(cli_type, args=argv, prog=prog, description=description, config=tuple(markers))
+    result = tyro.cli(
+        _cli_type(reg, overrides),
+        args=argv,
+        prog=prog,
+        description=description,
+        config=tuple(markers),
+        registry=tyro_registry,
+    )
 
     if not isinstance(result, Entrypoint):
         return result  # a function entrypoint, already called by tyro
@@ -127,23 +146,37 @@ def cli(
     return result.run() if run else result
 
 
-def get_parser(
+def cli_type(
     discover: Union[str, Iterable[str], None] = None,
     *,
     exclude: Iterable[str] = (),
-    prog: Optional[str] = None,
-    description: Optional[str] = None,
-    markers: Sequence[Any] = DEFAULT_MARKERS,
     registry: Optional[Registry] = None,
-) -> argparse.ArgumentParser:
-    """Return the ``argparse`` parser behind :func:`cli` (e.g. for sphinx-argparse docs)."""
+) -> Any:
+    """Return the tyro type behind :func:`cli`, to use with tyro directly.
+
+    It is a ``Union`` of one ``Annotated`` subcommand per registered
+    entrypoint, or that single subcommand type when only one is registered.
+    Pass :data:`tyro_registry` along with it so private fields stay hidden and
+    parsing does not re-register entrypoints::
+
+        config = tyro.cli(
+            confort.cli_type("myproject"),
+            registry=confort.tyro_registry,
+            config=confort.DEFAULT_MARKERS,
+        )
+        config.run()
+
+    Unlike :func:`cli`, nothing is run or saved for you, and there is no
+    ``--config-file`` flag.
+
+    Args:
+        discover: Package(s) to import recursively first (see :func:`confort.discover`).
+        exclude: Module names/patterns to skip during discovery.
+        registry: Registry to read entrypoints from (default: the global one).
+    """
     if discover is not None:
         _discover(discover, exclude)
-    reg = registry if registry is not None else _default_registry
-    with _tyro_registry:
-        return tyro.extras.get_parser(
-            _cli_type(reg, {}), prog=prog, description=description, config=tuple(markers)
-        )
+    return _cli_type(registry if registry is not None else _default_registry, {})
 
 
 # --- internals -----------------------------------------------------------------
